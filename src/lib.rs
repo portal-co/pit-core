@@ -16,9 +16,10 @@ use nom::{
     combinator::opt,
     error::Error,
     multi::{many0, separated_list0},
-    sequence::{delimited, tuple},
+    sequence::{delimited},
     IResult, Parser,
 };
+use core::convert::identity as tuple;
 use sha3::{Digest, Sha3_256};
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Attr {

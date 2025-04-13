@@ -91,11 +91,11 @@ impl Display for Attr {
 #[non_exhaustive]
 #[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub enum ResTy {
-    #[display(fmt = "")]
+    #[display("")]
     None,
-    #[display(fmt = "{}", "hex::encode(_0)")]
+    #[display("{}", hex::encode(_0))]
     Of([u8; 32]),
-    #[display(fmt = "this")]
+    #[display("this")]
     This,
 }
 pub fn parse_resty(a: &str) -> IResult<&str, ResTy> {
@@ -124,11 +124,11 @@ pub enum Arg {
     F32,
     F64,
     #[display(
-        fmt = "{}R{}{}{}",
-        "ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(\"\")",
-        "ty",
-        "if *nullable{\"n\"}else{\"\"}",
-        "if *take{\"\"}else{\"&\"}"
+        "{}R{}{}{}",
+        ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
+        ty,
+        if *nullable{"n"}else{""},
+        if *take{""}else{"&"}
     )]
     Resource {
         ty: ResTy,
@@ -187,10 +187,10 @@ pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
 }
 #[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord)]
 #[display(
-    fmt = "{}({}) -> ({})",
-    "ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(\"\")",
-    "params.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(\",\")",
-    "rets.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(\",\")"
+   "{}({}) -> ({})",
+    ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
+    params.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(","),
+    rets.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(",")
 )]
 pub struct Sig {
     pub ann: Vec<Attr>,

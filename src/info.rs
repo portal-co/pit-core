@@ -1,7 +1,7 @@
 use alloc::{borrow::ToOwned, collections::BTreeMap, string::String, vec::Vec};use core::{ fmt::Display};
 
 use nom::{
-    bytes::complete::{tag, take_while_m_n}, character::complete::{alphanumeric1, multispace0}, multi::many0, sequence::delimited, IResult
+    bytes::complete::{tag, take_while_m_n}, character::complete::{alphanumeric1, multispace0}, multi::many0, sequence::delimited, IResult, Parser
 };
 
 use crate::{merge, parse_attr, Attr};
@@ -81,10 +81,10 @@ pub fn parse_entry(a: &str) -> IResult<&str, InfoEntry> {
         let (a,c) = parse_attr(a)?;
         Ok((a,(b,c)))
     }
-    let (a,mut e) = many0(go1)(a)?;
+    let (a,mut e) = many0(go1).parse(a)?;
     e.sort_by_key(|k|k.name.clone());
     let mut n: BTreeMap<String, MethEntry> = BTreeMap::new();
-    let (a,l) = many0(go2)(a)?;
+    let (a,l) = many0(go2).parse(a)?;
     for (k,v) in l{
         n.entry(k.to_owned()).or_insert_with(Default::default).attrs.push(v);
     }
@@ -103,10 +103,10 @@ pub fn parse_info(a: &str) -> IResult<&str, Info> {
         let (a,_) = multispace0(a)?;
         let (a,_) = tag(":")(a)?;
         let (a,_) = multispace0(a)?;
-        let (a, c) = delimited(tag("["), parse_entry, tag("]"))(a)?;
+        let (a, c) = delimited(tag("["), parse_entry, tag("]")).parse(a)?;
         return Ok((a, (b, c)));
     }
-    let (a, all) = many0(go)(a)?;
+    let (a, all) = many0(go).parse(a)?;
     Ok((
         a,
         Info {

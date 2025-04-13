@@ -17,7 +17,7 @@ use nom::{
     error::Error,
     multi::{many0, separated_list0},
     sequence::{delimited, tuple},
-    IResult,
+    IResult, Parser,
 };
 use sha3::{Digest, Sha3_256};
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord)]
@@ -78,7 +78,7 @@ pub fn parse_attr(a: &str) -> IResult<&str, Attr> {
 }
 
 pub fn parse_attrs(a: &str) -> IResult<&str, Vec<Attr>> {
-    let (a, mut b) = many0(parse_attr)(a)?;
+    let (a, mut b) = many0(parse_attr).parse(a)?;
     b.sort_by_key(|a| a.name.clone());
     Ok((a, b))
 }
@@ -103,7 +103,7 @@ pub fn parse_resty(a: &str) -> IResult<&str, ResTy> {
         // let (a, k) = opt(tag("n"))(a)?;
         return Ok((a, ResTy::This));
     }
-    let (a, d) = opt(take_while_m_n(64, 64, |a: char| a.is_digit(16)))(a)?;
+    let (a, d) = opt(take_while_m_n(64, 64, |a: char| a.is_digit(16))).parse(a)?;
     return Ok((
         a,
         match d {
@@ -156,8 +156,8 @@ pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
             //     ));
             // }
             let (a, d) = parse_resty(b)?;
-            let (a, k) = opt(tag("n"))(a)?;
-            let (a, take) = opt(tag("&"))(a)?;
+            let (a, k) = opt(tag("n")).parse(a)?;
+            let (a, take) = opt(tag("&")).parse(a)?;
             return Ok((
                 a,
                 Arg::Resource {
@@ -201,11 +201,11 @@ pub fn parse_sig(a: &str) -> IResult<&str, Sig> {
     let (a, b) = parse_attrs(a)?;
     let (a, _) = multispace0(a)?;
     let mut d = delimited(char('('), separated_list0(char(','), parse_arg), char(')'));
-    let (a, params) = d(a)?;
+    let (a, params) = d.parse(a)?;
     let (a, _) = multispace0(a)?;
     let (a, _) = tag("->")(a)?;
     let (a, _) = multispace0(a)?;
-    let (a, rets) = d(a)?;
+    let (a, rets) = d.parse(a)?;
     return Ok((
         a,
         Sig {
@@ -239,7 +239,7 @@ impl Display for Interface {
 }
 pub fn parse_interface(a: &str) -> IResult<&str, Interface> {
     pub fn go(a: &str) -> IResult<&str, Interface> {
-        let (a, s) = separated_list0(char(';'), tuple((multispace0, alphanumeric1, parse_sig)))(a)?;
+        let (a, s) = separated_list0(char(';'), tuple((multispace0, alphanumeric1, parse_sig))).parse(a)?;
         let (a, _) = multispace0(a)?;
         return Ok((
             a,
@@ -251,7 +251,7 @@ pub fn parse_interface(a: &str) -> IResult<&str, Interface> {
     }
     let (a, _) = multispace0(a)?;
     let (a, b) = parse_attrs(a)?;
-    let (a, mut c) = delimited(char('{'), go, char('}'))(a)?;
+    let (a, mut c) = delimited(char('{'), go, char('}')).parse(a)?;
     c.ann = b;
     return Ok((a, c));
 }

@@ -27,6 +27,24 @@ pub struct Attr {
     pub value: String,
 }
 
+impl Attr{
+    pub fn as_wasm_abi(&self) -> Option<usize>{
+        if self.name == "wasmAbiVer"{
+            Some(usize::from_str_radix(&self.value, 16).ok()? + 1)
+        }else{
+            None
+        }
+    }
+    pub fn from_wasm_abi(ver: usize) -> Option<Self>{
+        if ver == 0{
+            None
+        }else{
+            let ver = ver - 1;
+            Some(Self { name: "wasmAbiVer".to_owned(), value: format!("{ver:x}") })
+        }
+    }
+}
+
 pub fn merge(a: Vec<Attr>, b: Vec<Attr>) -> Vec<Attr> {
     let mut m = BTreeMap::new();
     for x in a.into_iter().chain(b) {

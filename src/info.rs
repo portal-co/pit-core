@@ -1,59 +1,69 @@
-use alloc::{borrow::ToOwned, collections::BTreeMap, string::String, vec::Vec};use core::{ fmt::Display};
+use alloc::{borrow::ToOwned, collections::BTreeMap, string::String, vec::Vec};
+use core::fmt::Display;
 
 use nom::{
-    bytes::complete::{tag, take_while_m_n}, character::complete::{alphanumeric1, multispace0}, multi::many0, sequence::delimited, IResult, Parser
+    bytes::complete::{tag, take_while_m_n},
+    character::complete::{alphanumeric1, multispace0},
+    multi::many0,
+    sequence::delimited,
+    IResult, Parser,
 };
 
 use crate::{merge, parse_attr, Attr};
-#[derive(Default,Clone)]
+#[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Info {
     pub interfaces: BTreeMap<[u8; 32], InfoEntry>,
 }
-impl Info{
-    pub fn merge(self, x: Info) -> Info{
-        let mut m: BTreeMap<[u8;32],InfoEntry> = BTreeMap::new();
-        for (a,b) in self.interfaces.into_iter().chain(x.interfaces.into_iter()){
+impl Info {
+    pub fn merge(self, x: Info) -> Info {
+        let mut m: BTreeMap<[u8; 32], InfoEntry> = BTreeMap::new();
+        for (a, b) in self.interfaces.into_iter().chain(x.interfaces.into_iter()) {
             let c = m.remove(&a).unwrap_or_default().merge(b);
             m.insert(a, c);
         }
         Info { interfaces: m }
     }
 }
-#[derive(Default,Clone)]
+#[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct InfoEntry {
     pub attrs: Vec<Attr>,
-    pub methods: BTreeMap<String,MethEntry>
+    pub methods: BTreeMap<String, MethEntry>,
 }
-impl InfoEntry{
-    pub fn merge(self, x: InfoEntry) -> InfoEntry{
+impl InfoEntry {
+    pub fn merge(self, x: InfoEntry) -> InfoEntry {
         let mut m: BTreeMap<String, MethEntry> = BTreeMap::new();
-        for (a,b) in self.methods.into_iter().chain(x.methods.into_iter()){
+        for (a, b) in self.methods.into_iter().chain(x.methods.into_iter()) {
             let c = m.remove(&a).unwrap_or_default().merge(b);
             m.insert(a, c);
         }
-        InfoEntry { attrs: merge(self.attrs, x.attrs), methods: m }
+        InfoEntry {
+            attrs: merge(self.attrs, x.attrs),
+            methods: m,
+        }
     }
 }
-#[derive(Default,Clone)]
-pub struct MethEntry{
-    pub attrs: Vec<Attr>
+#[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+pub struct MethEntry {
+    pub attrs: Vec<Attr>,
 }
-impl MethEntry{
-    pub fn merge(self, x: MethEntry) -> MethEntry{
-        MethEntry { attrs: merge(self.attrs, x.attrs) }
+impl MethEntry {
+    pub fn merge(self, x: MethEntry) -> MethEntry {
+        MethEntry {
+            attrs: merge(self.attrs, x.attrs),
+        }
     }
 }
 impl Display for InfoEntry {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        for a in self.attrs.iter(){
-            write!(f,"root {a}")?;
+        for a in self.attrs.iter() {
+            write!(f, "root {a}")?;
         }
-        for (k,m) in self.methods.iter(){
-            for a in m.attrs.iter(){
-                write!(f,"method {k} {a}")?;
+        for (k, m) in self.methods.iter() {
+            for a in m.attrs.iter() {
+                write!(f, "method {k} {a}")?;
             }
         }
-       Ok(())
+        Ok(())
     }
 }
 impl Display for Info {
@@ -65,44 +75,53 @@ impl Display for Info {
     }
 }
 pub fn parse_entry(a: &str) -> IResult<&str, InfoEntry> {
-    let (a,_) = multispace0(a)?;
-    pub fn go1(a: &str) -> IResult<&str,Attr>{
-        let (a,_) = multispace0(a)?;
-        let (a,_) = tag("root")(a)?;
-        let (a,_) = multispace0(a)?;
+    let (a, _) = multispace0(a)?;
+    pub fn go1(a: &str) -> IResult<&str, Attr> {
+        let (a, _) = multispace0(a)?;
+        let (a, _) = tag("root")(a)?;
+        let (a, _) = multispace0(a)?;
         return parse_attr(a);
     }
-    pub fn go2(a: &str) -> IResult<&str,(&str,Attr)>{
-        let (a,_) = multispace0(a)?;
-        let (a,_) = tag("method")(a)?;
-        let (a,_) = multispace0(a)?;
-        let (a,b) =         alphanumeric1(a)?;
-        let (a,_) = multispace0(a)?;
-        let (a,c) = parse_attr(a)?;
-        Ok((a,(b,c)))
+    pub fn go2(a: &str) -> IResult<&str, (&str, Attr)> {
+        let (a, _) = multispace0(a)?;
+        let (a, _) = tag("method")(a)?;
+        let (a, _) = multispace0(a)?;
+        let (a, b) = alphanumeric1(a)?;
+        let (a, _) = multispace0(a)?;
+        let (a, c) = parse_attr(a)?;
+        Ok((a, (b, c)))
     }
-    let (a,mut e) = many0(go1).parse(a)?;
-    e.sort_by_key(|k|k.name.clone());
+    let (a, mut e) = many0(go1).parse(a)?;
+    e.sort_by_key(|k| k.name.clone());
     let mut n: BTreeMap<String, MethEntry> = BTreeMap::new();
-    let (a,l) = many0(go2).parse(a)?;
-    for (k,v) in l{
-        n.entry(k.to_owned()).or_insert_with(Default::default).attrs.push(v);
+    let (a, l) = many0(go2).parse(a)?;
+    for (k, v) in l {
+        n.entry(k.to_owned())
+            .or_insert_with(Default::default)
+            .attrs
+            .push(v);
     }
-    for v in n.values_mut(){
-        v.attrs.sort_by_key(|k|k.name.clone());
+    for v in n.values_mut() {
+        v.attrs.sort_by_key(|k| k.name.clone());
     }
-    let (a,_) = multispace0(a)?;
-    Ok((a, InfoEntry { attrs: e, methods: n }))
+    let (a, _) = multispace0(a)?;
+    Ok((
+        a,
+        InfoEntry {
+            attrs: e,
+            methods: n,
+        },
+    ))
 }
 pub fn parse_info(a: &str) -> IResult<&str, Info> {
     pub fn go(a: &str) -> IResult<&str, ([u8; 32], InfoEntry)> {
-        let (a,_) = multispace0(a)?;
+        let (a, _) = multispace0(a)?;
         let (a, d) = take_while_m_n(64, 64, |a: char| a.is_digit(16))(a)?;
         let mut b = [0u8; 32];
         hex::decode_to_slice(d, &mut b).unwrap();
-        let (a,_) = multispace0(a)?;
-        let (a,_) = tag(":")(a)?;
-        let (a,_) = multispace0(a)?;
+        let (a, _) = multispace0(a)?;
+        let (a, _) = tag(":")(a)?;
+        let (a, _) = multispace0(a)?;
         let (a, c) = delimited(tag("["), parse_entry, tag("]")).parse(a)?;
         return Ok((a, (b, c)));
     }

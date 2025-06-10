@@ -8,6 +8,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
+use core::convert::identity as tuple;
 use core::fmt::{self, Display};
 use derive_more::Display;
 use nom::{
@@ -16,31 +17,33 @@ use nom::{
     combinator::opt,
     error::Error,
     multi::{many0, separated_list0},
-    sequence::{delimited},
+    sequence::delimited,
     IResult, Parser,
 };
-use core::convert::identity as tuple;
 use sha3::{Digest, Sha3_256};
-#[derive(Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Attr {
     pub name: String,
     pub value: String,
 }
 
-impl Attr{
-    pub fn as_wasm_abi(&self) -> Option<usize>{
-        if self.name == "wasmAbiVer"{
+impl Attr {
+    pub fn as_wasm_abi(&self) -> Option<usize> {
+        if self.name == "wasmAbiVer" {
             Some(usize::from_str_radix(&self.value, 16).ok()? + 1)
-        }else{
+        } else {
             None
         }
     }
-    pub fn from_wasm_abi(ver: usize) -> Option<Self>{
-        if ver == 0{
+    pub fn from_wasm_abi(ver: usize) -> Option<Self> {
+        if ver == 0 {
             None
-        }else{
+        } else {
             let ver = ver - 1;
-            Some(Self { name: "wasmAbiVer".to_owned(), value: format!("{ver:x}") })
+            Some(Self {
+                name: "wasmAbiVer".to_owned(),
+                value: format!("{ver:x}"),
+            })
         }
     }
 }
@@ -108,7 +111,7 @@ impl Display for Attr {
     }
 }
 #[non_exhaustive]
-#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub enum ResTy {
     #[display("")]
     None,
@@ -136,7 +139,7 @@ pub fn parse_resty(a: &str) -> IResult<&str, ResTy> {
     ));
 }
 #[non_exhaustive]
-#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub enum Arg {
     I32,
     I64,
@@ -204,7 +207,7 @@ pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
     }
     todo!()
 }
-#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[display(
    "{}({}) -> ({})",
     ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
@@ -234,7 +237,7 @@ pub fn parse_sig(a: &str) -> IResult<&str, Sig> {
         },
     ));
 }
-#[derive(Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Interface {
     pub methods: BTreeMap<String, Sig>,
     pub ann: Vec<Attr>,
@@ -258,7 +261,8 @@ impl Display for Interface {
 }
 pub fn parse_interface(a: &str) -> IResult<&str, Interface> {
     pub fn go(a: &str) -> IResult<&str, Interface> {
-        let (a, s) = separated_list0(char(';'), tuple((multispace0, alphanumeric1, parse_sig))).parse(a)?;
+        let (a, s) =
+            separated_list0(char(';'), tuple((multispace0, alphanumeric1, parse_sig))).parse(a)?;
         let (a, _) = multispace0(a)?;
         return Ok((
             a,

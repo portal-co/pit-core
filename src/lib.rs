@@ -13,7 +13,7 @@ use core::fmt::{self, Display};
 use derive_more::Display;
 use nom::{
     bytes::complete::{is_not, tag, take, take_while_m_n},
-    character::complete::{alpha1, alphanumeric1, char, multispace0},
+    character::complete::{alpha1, alphanumeric1, char, multispace0, none_of},
     combinator::opt,
     error::Error,
     multi::{many0, separated_list0},
@@ -86,7 +86,7 @@ pub fn parse_attr(a: &str) -> IResult<&str, Attr> {
     let (a, _) = multispace0(a)?;
     let (a, _) = char('[')(a)?;
     let (a, _) = multispace0(a)?;
-    let (a, name) = alphanumeric1(a)?;
+    let (a, name) = many0(none_of("=")).parse(a)?;
     let (a, _) = multispace0(a)?;
     let (a, _) = char('=')(a)?;
     let (a, _) = multispace0(a)?;
@@ -96,7 +96,7 @@ pub fn parse_attr(a: &str) -> IResult<&str, Attr> {
     return Ok((
         a,
         Attr {
-            name: name.to_owned(),
+            name: name.into_iter().collect(),
             value,
         },
     ));

@@ -21,6 +21,9 @@ use nom::{
     IResult, Parser,
 };
 use sha3::{Digest, Sha3_256};
+
+use crate::util::WriteUpdate;
+pub mod util;
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Attr {
     pub name: String,
@@ -283,7 +286,7 @@ impl Interface {
         // use core::io::Write;
         use core::fmt::Write;
         let mut s = Sha3_256::default();
-        s.update(self.to_string());
+        write!(WriteUpdate { wrapped: &mut s }, "{self}").unwrap();
         return s.finalize().try_into().unwrap();
     }
     pub fn rid_str(&self) -> String {

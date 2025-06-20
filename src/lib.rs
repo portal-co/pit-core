@@ -13,7 +13,7 @@ use core::fmt::{self, Display};
 use derive_more::Display;
 use nom::{
     bytes::complete::{is_not, tag, take, take_while_m_n},
-    character::complete::{alpha1, alphanumeric1, char, multispace0, none_of},
+    character::complete::{alpha1, alphanumeric1, char, multispace0, none_of, space0},
     combinator::opt,
     error::Error,
     multi::{many0, separated_list0},
@@ -28,6 +28,38 @@ pub mod util;
 pub struct Attr {
     pub name: String,
     pub value: String,
+}
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default)]
+pub struct Arity {
+    pub to_fill: BTreeMap<String, Arity>,
+}
+impl Display for Arity {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "<")?;
+        for (a, b) in &self.to_fill {
+            write!(f, "{a} {b}")?;
+        }
+        write!(f, ">")?;
+        Ok(())
+    }
+}
+impl Arity {
+    pub fn parse(a: &str) -> IResult<&str, Self> {
+        let (a, c) = space0
+            .and_then(delimited(
+                tag("<"),
+                many0(space0.and_then((alphanumeric1, space0.and_then(Arity::parse)))),
+                tag(">"),
+            ))
+            .parse(a)?;
+        return Ok((
+            a,
+            Arity {
+                to_fill: c.into_iter().map(|(a, b)| (a.to_owned(), b)).collect(),
+            },
+        ));
+    }
 }
 
 impl Attr {

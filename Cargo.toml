@@ -10,5 +10,6 @@ description = "Portal Interface Types"
 [dependencies]
 derive_more = { version = "2", default-features = false, features = ["display"] }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+instability = "0.3.7"
 nom = { version = "8", default-features = false, features = ["alloc"] }
 sha3 = { version = "0.10.8", default-features = false }

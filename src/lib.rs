@@ -21,7 +21,20 @@ use nom::{
     IResult, Parser,
 };
 use sha3::{Digest, Sha3_256};
-pub mod generics;
+#[path = "generics.rs"]
+mod _generics;
+#[path = "pcode.rs"]
+mod _pcode;
+
+#[instability::unstable(feature = "pcode")]
+pub mod pcode {
+    pub use crate::_pcode::*;
+}
+
+#[instability::unstable(feature = "generics")]
+pub mod generics {
+    pub use crate::_generics::*;
+}
 
 use crate::util::WriteUpdate;
 pub mod util;

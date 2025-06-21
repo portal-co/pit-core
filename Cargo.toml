@@ -15,4 +15,3 @@ nom = { version = "8", default-features = false, features = ["alloc"] }
 sha3 = { version = "0.10.8", default-features = false }
 
 [features]
-unstable-generics=[]

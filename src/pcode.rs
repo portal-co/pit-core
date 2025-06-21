@@ -1,6 +1,24 @@
+use alloc::{boxed::Box, string::String, vec::Vec};
+
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[non_exhaustive]
-pub enum PExpr{
+pub enum PExpr {
     Param(usize),
-
+    Var(String),
+    Call {
+        rid: [u8; 32],
+        method: String,
+        obj: Box<PExpr>,
+        args: Vec<PExpr>,
+        ret: Pat,
+    },
+    LitI32(u32),
+    LitI64(u64),
+    LitF32(u32),
+    LitF64(u64),
+}
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+pub struct Pat {
+    pub params: Vec<String>,
+    pub body: Box<PExpr>,
 }

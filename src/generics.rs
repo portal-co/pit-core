@@ -6,6 +6,8 @@ use nom::{
 };
 
 use crate::*;
+pub const ARITY_KEY: &'static str = "generic_params.modern";
+pub const GENERIC_KEY: &'static str = "generics.modern";
 pub trait Mangle {
     fn demangle(a: &str) -> IResult<&str, Self>
     where

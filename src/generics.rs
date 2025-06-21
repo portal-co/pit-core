@@ -28,11 +28,11 @@ impl Mangle for Arity {
         Self: Sized,
     {
         let (a, b) = tag(";")
-            .and_then(alphanumeric1.map_opt(|a: &str| a.parse::<usize>().ok()))
+            .and_then(ident.map_opt(|a: &str| a.parse::<usize>().ok()))
             .parse(a)?;
         let (a, m) = many1((
-            tag("P").and_then(alphanumeric1),
-            tag(";").and_then(alphanumeric1.map_opt(|a: &str| a.parse::<usize>().ok())),
+            tag("P").and_then(ident),
+            tag(";").and_then(ident.map_opt(|a: &str| a.parse::<usize>().ok())),
         ))
         .parse(a)?;
         let mut stack = vec![];
@@ -81,13 +81,13 @@ impl Mangle for Param {
                     hex::decode_to_slice(a, &mut b).unwrap();
                     b
                 })),
-                tag(";").and_then(alphanumeric1.map_opt(|a: &str| a.parse::<usize>().ok())),
+                tag(";").and_then(ident.map_opt(|a: &str| a.parse::<usize>().ok())),
             )
                 .parse(a)?;
 
             let (a, params) = count(
                 (
-                    tag(";").and_then(alphanumeric1),
+                    tag(";").and_then(ident),
                     tag(";").and_then(Param::demangle),
                 ),
                 b.1,
@@ -104,14 +104,14 @@ impl Mangle for Param {
         }
         fn parse_param(a: &str) -> IResult<&str, Param> {
             let (a, b) = (
-                tag("$").and_then(alphanumeric1),
-                tag(";").and_then(alphanumeric1.map_opt(|a: &str| a.parse::<usize>().ok())),
+                tag("$").and_then(ident),
+                tag(";").and_then(ident.map_opt(|a: &str| a.parse::<usize>().ok())),
             )
                 .parse(a)?;
 
             let (a, params) = count(
                 (
-                    tag(";").and_then(alphanumeric1),
+                    tag(";").and_then(ident),
                     tag(";").and_then(Param::demangle),
                 ),
                 b.1,

@@ -13,12 +13,12 @@ use core::fmt::{self, Display};
 use derive_more::Display;
 use nom::{
     bytes::complete::{is_not, tag, take, take_while_m_n},
-    character::complete::{alpha1, alphanumeric1, char, multispace0, none_of, space0},
+    character::complete::{alpha1,  char, multispace0, none_of, space0},
     combinator::opt,
     error::Error,
     multi::{many0, separated_list0},
     sequence::delimited,
-    IResult, Parser,
+    AsChar, IResult, Input, Parser,
 };
 use sha3::{Digest, Sha3_256};
 #[path = "generics.rs"]
@@ -38,6 +38,12 @@ pub mod generics {
 
 use crate::util::WriteUpdate;
 pub mod util;
+pub fn ident(a: &str) -> IResult<&str, &str> {
+    return a.split_at_position1_complete(
+        |a| !a.is_alphanum() && !(['_', '$', '.'].into_iter().any(|x| x == a)),
+        nom::error::ErrorKind::AlphaNumeric,
+    );
+}
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Attr {
     pub name: String,
@@ -70,7 +76,7 @@ impl Arity {
         let (a, c) = space0
             .and_then(delimited(
                 tag("<"),
-                many0(space0.and_then((alphanumeric1, space0.and_then(Arity::parse)))),
+                many0(space0.and_then((ident, space0.and_then(Arity::parse)))),
                 tag(">"),
             ))
             .parse(a)?;
@@ -318,7 +324,7 @@ impl Display for Interface {
 pub fn parse_interface(a: &str) -> IResult<&str, Interface> {
     pub fn go(a: &str) -> IResult<&str, Interface> {
         let (a, s) =
-            separated_list0(char(';'), tuple((multispace0, alphanumeric1, parse_sig))).parse(a)?;
+            separated_list0(char(';'), tuple((multispace0, ident, parse_sig))).parse(a)?;
         let (a, _) = multispace0(a)?;
         return Ok((
             a,

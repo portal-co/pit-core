@@ -21,6 +21,7 @@ use nom::{
     IResult, Parser,
 };
 use sha3::{Digest, Sha3_256};
+pub mod generics;
 
 use crate::util::WriteUpdate;
 pub mod util;
@@ -45,6 +46,13 @@ impl Display for Arity {
     }
 }
 impl Arity {
+    pub fn is_simple(&self, depth: usize) -> bool {
+        if depth == 0 {
+            false
+        } else {
+            self.to_fill.values().all(|a| a.is_simple(depth - 1))
+        }
+    }
     pub fn parse(a: &str) -> IResult<&str, Self> {
         let (a, c) = space0
             .and_then(delimited(

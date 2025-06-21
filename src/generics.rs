@@ -62,6 +62,10 @@ pub enum Param {
         rid: [u8; 32],
         params: BTreeMap<String, Param>,
     },
+    Param {
+        param: String,
+        nest: BTreeMap<String, Param>,
+    },
 }
 impl Mangle for Param {
     fn demangle(a: &str) -> IResult<&str, Self>
@@ -96,7 +100,35 @@ impl Mangle for Param {
                 },
             ))
         }
-        return parse_attr.map(Param::Attr).or(parse_nonattr).parse(a);
+        fn parse_param(a: &str) -> IResult<&str, Param> {
+            let (a, b) = (
+                tag("$").and_then(alphanumeric1),
+                tag(";").and_then(alphanumeric1.map_opt(|a: &str| a.parse::<usize>().ok())),
+            )
+                .parse(a)?;
+
+            let (a, params) = count(
+                (
+                    tag(";").and_then(alphanumeric1),
+                    tag(";").and_then(Param::demangle),
+                ),
+                b.1,
+            )
+            .parse(a)?;
+
+            Ok((
+                a,
+                Param::Param {
+                    param: b.0.to_owned(),
+                    nest: params.into_iter().map(|(a, b)| (a.to_owned(), b)).collect(),
+                },
+            ))
+        }
+        return parse_attr
+            .map(Param::Attr)
+            .or(parse_nonattr)
+            .or(parse_param)
+            .parse(a);
     }
 
     fn mangle(&self, f: &mut Formatter) -> core::fmt::Result {
@@ -105,7 +137,14 @@ impl Mangle for Param {
             Param::Interface { rid, params } => {
                 write!(f, "R{};{}", hex::encode(rid), params.len())?;
                 for (a, b) in params.iter() {
-                    write!(f, ";{a};{}",Mangled(b))?;
+                    write!(f, ";{a};{}", Mangled(b))?;
+                }
+                Ok(())
+            }
+            Param::Param { param, nest } => {
+                write!(f, "${param};{}", nest.len())?;
+                for (a, b) in nest.iter() {
+                    write!(f, ";{a};{}", Mangled(b))?;
                 }
                 Ok(())
             }

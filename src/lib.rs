@@ -13,7 +13,7 @@ use core::fmt::{self, Display};
 use derive_more::Display;
 use nom::{
     bytes::complete::{is_not, tag, take, take_while_m_n},
-    character::complete::{alpha1,  char, multispace0, none_of, space0},
+    character::complete::{alpha1, char, multispace0, none_of, space0},
     combinator::opt,
     error::Error,
     multi::{many0, separated_list0},
@@ -91,19 +91,25 @@ impl Arity {
 
 impl Attr {
     pub fn as_wasm_abi(&self) -> Option<usize> {
-        if self.name == "wasmAbiVer" {
+        self.as_abi("wasmAbiVer")
+    }
+    pub fn from_wasm_abi(ver: usize) -> Option<Self> {
+        Self::from_abi(ver, "wasmAbiVer")
+    }
+    pub fn as_abi(&self, a: &str) -> Option<usize> {
+        if self.name == a {
             Some(usize::from_str_radix(&self.value, 16).ok()? + 1)
         } else {
             None
         }
     }
-    pub fn from_wasm_abi(ver: usize) -> Option<Self> {
+    pub fn from_abi(ver: usize, a: &str) -> Option<Self> {
         if ver == 0 {
             None
         } else {
             let ver = ver - 1;
             Some(Self {
-                name: "wasmAbiVer".to_owned(),
+                name: a.to_owned(),
                 value: format!("{ver:x}"),
             })
         }
@@ -323,8 +329,7 @@ impl Display for Interface {
 }
 pub fn parse_interface(a: &str) -> IResult<&str, Interface> {
     pub fn go(a: &str) -> IResult<&str, Interface> {
-        let (a, s) =
-            separated_list0(char(';'), tuple((multispace0, ident, parse_sig))).parse(a)?;
+        let (a, s) = separated_list0(char(';'), tuple((multispace0, ident, parse_sig))).parse(a)?;
         let (a, _) = multispace0(a)?;
         return Ok((
             a,

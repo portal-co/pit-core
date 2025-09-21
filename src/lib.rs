@@ -8,17 +8,18 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::convert::identity as tuple;
+use base64::Engine;
 use core::fmt::{self, Display};
+use core::{convert::identity as tuple, fmt::Formatter};
 use derive_more::Display;
 use nom::{
+    AsChar, IResult, Input, Parser,
     bytes::complete::{is_not, tag, take, take_while_m_n},
     character::complete::{alpha1, char, multispace0, none_of, space0},
     combinator::opt,
     error::Error,
     multi::{many0, separated_list0},
     sequence::delimited,
-    AsChar, IResult, Input, Parser,
 };
 use sha3::{Digest, Sha3_256};
 #[path = "generics.rs"]
@@ -91,19 +92,19 @@ impl Arity {
 
 impl Attr {
     pub fn as_wasm_abi(&self) -> Option<usize> {
-        self.as_abi("wasmAbiVer")
+        self.as_ver("wasmAbiVer")
     }
     pub fn from_wasm_abi(ver: usize) -> Option<Self> {
-        Self::from_abi(ver, "wasmAbiVer")
+        Self::from_ver(ver, "wasmAbiVer")
     }
-    pub fn as_abi(&self, a: &str) -> Option<usize> {
+    pub fn as_ver(&self, a: &str) -> Option<usize> {
         if self.name == a {
             Some(usize::from_str_radix(&self.value, 16).ok()? + 1)
         } else {
             None
         }
     }
-    pub fn from_abi(ver: usize, a: &str) -> Option<Self> {
+    pub fn from_ver(ver: usize, a: &str) -> Option<Self> {
         if ver == 0 {
             None
         } else {
@@ -179,19 +180,52 @@ impl Display for Attr {
     }
 }
 #[non_exhaustive]
-#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub enum ResTy {
-    #[display("")]
+    // #[display("")]
     None,
-    #[display("{}", hex::encode(_0))]
+    // #[display("{}", hex::encode(_0))]
     Of([u8; 32]),
-    #[display("this")]
+    // #[display("this")]
     This,
+}
+impl ResTy {
+    fn render(
+        &self,
+        fmt: &mut Formatter,
+        gattrs: &(dyn Fn(&str) -> Option<usize> + '_),
+    ) -> core::fmt::Result {
+        match self {
+            ResTy::None => Ok(()),
+            ResTy::Of(v) => {
+                if gattrs("ridFmtVer").unwrap_or_default() >= 1 {
+                    write!(
+                        fmt,
+                        "~b64{}~",
+                        base64::engine::general_purpose::STANDARD_NO_PAD.encode(v)
+                    )
+                } else {
+                    write!(fmt, "{}", hex::encode(v))
+                }
+            }
+            ResTy::This => {
+                write!(fmt, "this")
+            }
+        }
+    }
 }
 pub fn parse_resty(a: &str) -> IResult<&str, ResTy> {
     if let Some(a) = a.strip_prefix("this") {
         // let (a, k) = opt(tag("n"))(a)?;
         return Ok((a, ResTy::This));
+    }
+    if let Some((be, a)) = a.strip_prefix("~b64").and_then(|a| a.split_once("~")) {
+        let mut b = [0u8; 32];
+        if let Ok(v) = base64::engine::general_purpose::STANDARD_NO_PAD.decode_slice(be, &mut b)
+            && v == 32
+        {
+            return Ok((a, ResTy::Of(b)));
+        }
     }
     let (a, d) = opt(take_while_m_n(64, 64, |a: char| a.is_digit(16))).parse(a)?;
     return Ok((
@@ -207,19 +241,19 @@ pub fn parse_resty(a: &str) -> IResult<&str, ResTy> {
     ));
 }
 #[non_exhaustive]
-#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub enum Arg {
     I32,
     I64,
     F32,
     F64,
-    #[display(
-        "{}R{}{}{}",
-        ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
-        ty,
-        if *nullable{"n"}else{""},
-        if *take{""}else{"&"}
-    )]
+    // #[display(
+    //     "{}R{}{}{}",
+    //     ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
+    //     ty,
+    //     if *nullable{"n"}else{""},
+    //     if *take{""}else{"&"}
+    // )]
     Resource {
         ty: ResTy,
         nullable: bool,
@@ -228,6 +262,42 @@ pub enum Arg {
     },
     // #[display(fmt = "{}", _0)]
     // Func(Sig),
+}
+impl Arg {
+    fn render(
+        &self,
+        fmt: &mut Formatter,
+        gattrs: &(dyn Fn(&str) -> Option<usize> + '_),
+    ) -> core::fmt::Result {
+        match self {
+            Arg::I32 => write!(fmt, "I32"),
+            Arg::I64 => write!(fmt, "I64"),
+            Arg::F32 => write!(fmt, "F32"),
+            Arg::F64 => write!(fmt, "F64"),
+            Arg::Resource {
+                ty,
+                nullable,
+                take,
+                ann,
+            } => {
+                write!(
+                    fmt,
+                    "{}R",
+                    ann.iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<_>>()
+                        .join(""),
+                )?;
+                ty.render(fmt, gattrs)?;
+                write!(
+                    fmt,
+                    "{}{}",
+                    if *nullable { "n" } else { "" },
+                    if *take { "" } else { "&" }
+                )
+            }
+        }
+    }
 }
 pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
     let (a, ann) = parse_attrs(a)?;
@@ -275,17 +345,43 @@ pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
     }
     todo!()
 }
-#[derive(Display, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
-#[display(
-   "{}({}) -> ({})",
-    ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
-    params.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(","),
-    rets.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(",")
-)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+// #[display(
+//    "{}({}) -> ({})",
+//     ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
+//     params.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(","),
+//     rets.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(",")
+// )]
 pub struct Sig {
     pub ann: Vec<Attr>,
     pub params: Vec<Arg>,
     pub rets: Vec<Arg>,
+}
+impl Sig {
+    fn render(
+        &self,
+        fmt: &mut Formatter,
+        gattrs: &(dyn Fn(&str) -> Option<usize> + '_),
+    ) -> core::fmt::Result {
+        for a in self.ann.iter() {
+            write!(fmt, "{a}")?;
+        }
+        write!(fmt, "(")?;
+        for (i, p) in self.params.iter().enumerate() {
+            if i != 0 {
+                write!(fmt, ",")?;
+            }
+            p.render(fmt, gattrs)?;
+        }
+        write!(fmt, ") -> (")?;
+        for (i, p) in self.rets.iter().enumerate() {
+            if i != 0 {
+                write!(fmt, ",")?;
+            }
+            p.render(fmt, gattrs)?;
+        }
+        write!(fmt, ")")
+    }
 }
 pub fn parse_sig(a: &str) -> IResult<&str, Sig> {
     let (a, b) = parse_attrs(a)?;
@@ -310,8 +406,12 @@ pub struct Interface {
     pub methods: BTreeMap<String, Sig>,
     pub ann: Vec<Attr>,
 }
-impl Display for Interface {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl Interface {
+    fn render(
+        &self,
+        f: &mut Formatter,
+        gattrs: &(dyn Fn(&str) -> Option<usize> + '_),
+    ) -> core::fmt::Result {
         for a in self.ann.iter() {
             write!(f, "{a}")?;
         }
@@ -322,7 +422,8 @@ impl Display for Interface {
             if i != 0 {
                 write!(f, ";")?;
             }
-            write!(f, "{}{}", a, b)?;
+            write!(f, "{}", a)?;
+            b.render(f, gattrs)?;
         }
         return write!(f, "{}", "}");
     }
@@ -344,6 +445,21 @@ pub fn parse_interface(a: &str) -> IResult<&str, Interface> {
     let (a, mut c) = delimited(char('{'), go, char('}')).parse(a)?;
     c.ann = b;
     return Ok((a, c));
+}
+macro_rules! display {
+    ($($t:ty),*) => {
+        const _: () = {$(impl Display for $t{
+            fn fmt(&self, f: &mut Formatter) -> core::fmt::Result{
+                self.render(f,&|_|None)
+            }
+        })*};
+    };
+}
+display!(Sig, ResTy, Arg);
+impl Display for Interface {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.render(f, &|ab| self.ann.iter().find_map(|a| a.as_ver(ab)))
+    }
 }
 impl Interface {
     pub fn rid(&self) -> [u8; 32] {

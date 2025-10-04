@@ -6,14 +6,20 @@ use nom::{
 };
 
 use crate::*;
+/// Key for modern generic parameter arity.
 pub const ARITY_KEY: &'static str = "generic_params.modern";
+/// Key for modern generics.
 pub const GENERIC_KEY: &'static str = "generics.modern";
+/// Trait for mangling and demangling generic types.
 pub trait Mangle {
+    /// Demangles a string into a generic type.
     fn demangle(a: &str) -> IResult<&str, Self>
     where
         Self: Sized;
+    /// Mangles a generic type into a string.
     fn mangle(&self, f: &mut Formatter) -> core::fmt::Result;
 }
+/// Wrapper for a mangled generic type.
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct Mangled<'a>(pub &'a (dyn Mangle + 'a));
@@ -56,19 +62,25 @@ impl Mangle for Arity {
         Ok(())
     }
 }
+
+/// Represents a generic parameter, which can be an attribute, interface, or nested parameter.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[non_exhaustive]
 pub enum Param {
+    /// Attribute parameter.
     Attr(Attr),
+    /// Interface parameter with a resource ID and parameters.
     Interface {
         rid: [u8; 32],
         params: BTreeMap<String, Param>,
     },
+    /// Nested parameter with a name and sub-parameters.
     Param {
         param: String,
         nest: BTreeMap<String, Param>,
     },
 }
+/// Implements mangling and demangling for Param, supporting Attr, Interface, and Param variants.
 impl Mangle for Param {
     fn demangle(a: &str) -> IResult<&str, Self>
     where

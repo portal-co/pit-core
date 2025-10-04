@@ -1,5 +1,9 @@
 #![no_std]
 extern crate alloc;
+/// Core library for portal interface types, PIT
+///
+/// Provides generic utilities, parsing, and data structures for portal-co projects.
+/// This crate is `no_std` and uses `alloc` for heap-allocated types.
 use alloc::{
     borrow::ToOwned,
     collections::BTreeMap,
@@ -27,34 +31,44 @@ mod _generics;
 #[path = "pcode.rs"]
 mod _pcode;
 
+/// Unstable module for pcode-related functionality.
 #[instability::unstable(feature = "pcode")]
 pub mod pcode {
     pub use crate::_pcode::*;
 }
 
+/// Unstable module for generics-related functionality.
 #[instability::unstable(feature = "generics")]
 pub mod generics {
     pub use crate::_generics::*;
 }
 
 use crate::util::WriteUpdate;
+/// Utility functions and types.
 pub mod util;
+/// Parses an identifier from a string slice.
+///
+/// Identifiers may contain alphanumeric characters, '_', '$', and '.'.
+/// Returns a tuple of the remaining input and the parsed identifier.
 pub fn ident(a: &str) -> IResult<&str, &str> {
     return a.split_at_position1_complete(
         |a| !a.is_alphanum() && !(['_', '$', '.'].into_iter().any(|x| x == a)),
         nom::error::ErrorKind::AlphaNumeric,
     );
 }
+/// Attribute key-value pair.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Attr {
     pub name: String,
     pub value: String,
 }
 
+/// Represents the arity (number and structure of parameters) for generics.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default)]
 pub struct Arity {
     pub to_fill: BTreeMap<String, Arity>,
 }
+/// Display implementation for Arity, formats as a generic parameter list.
 impl Display for Arity {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "<")?;

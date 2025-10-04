@@ -10,10 +10,12 @@ use nom::{
 };
 
 use crate::{merge, parse_attr, Attr};
+/// Stores interface information for the crate.
 #[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Info {
     pub interfaces: BTreeMap<[u8; 32], InfoEntry>,
 }
+/// Merges two Info structs, combining their interfaces.
 impl Info {
     pub fn merge(self, x: Info) -> Info {
         let mut m: BTreeMap<[u8; 32], InfoEntry> = BTreeMap::new();
@@ -24,11 +26,13 @@ impl Info {
         Info { interfaces: m }
     }
 }
+/// Stores attributes and methods for an interface.
 #[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct InfoEntry {
     pub attrs: Vec<Attr>,
     pub methods: BTreeMap<String, MethEntry>,
 }
+/// Merges two InfoEntry structs, combining their attributes and methods.
 impl InfoEntry {
     pub fn merge(self, x: InfoEntry) -> InfoEntry {
         let mut m: BTreeMap<String, MethEntry> = BTreeMap::new();
@@ -42,10 +46,12 @@ impl InfoEntry {
         }
     }
 }
+/// Stores attributes for a method.
 #[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct MethEntry {
     pub attrs: Vec<Attr>,
 }
+/// Merges two MethEntry structs, combining their attributes.
 impl MethEntry {
     pub fn merge(self, x: MethEntry) -> MethEntry {
         MethEntry {
@@ -53,6 +59,7 @@ impl MethEntry {
         }
     }
 }
+/// Display implementation for InfoEntry, formats attributes as root entries.
 impl Display for InfoEntry {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         for a in self.attrs.iter() {

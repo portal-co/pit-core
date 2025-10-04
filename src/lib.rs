@@ -90,6 +90,9 @@ impl Arity {
             self.to_fill.values().all(|a| a.is_simple(depth - 1))
         }
     }
+    /// Parses a generic parameter arity from a string.
+    ///
+    /// Returns a tuple of the remaining input and the parsed `Arity`.
     pub fn parse(a: &str) -> IResult<&str, Self> {
         let (a, c) = space0
             .and_then(delimited(
@@ -209,6 +212,9 @@ pub enum ResTy {
     This,
 }
 impl ResTy {
+    /// Renders the resource type to a formatter.
+    ///
+    /// This is comparable to `Display`, but allows custom formatting based on attributes.
     fn render(
         &self,
         fmt: &mut Formatter,
@@ -285,6 +291,9 @@ pub enum Arg {
     // Func(Sig),
 }
 impl Arg {
+    /// Renders the argument type to a formatter.
+    ///
+    /// This is comparable to `Display`, but allows custom formatting based on attributes.
     fn render(
         &self,
         fmt: &mut Formatter,
@@ -378,6 +387,9 @@ pub struct Sig {
     pub rets: Vec<Arg>,
 }
 impl Sig {
+    /// Renders the method signature to a formatter.
+    ///
+    /// This is comparable to `Display`, but allows custom formatting based on attributes.
     fn render(
         &self,
         fmt: &mut Formatter,
@@ -430,6 +442,9 @@ pub struct Interface {
     pub ann: Vec<Attr>,
 }
 impl Interface {
+    /// Renders the interface to a formatter.
+    ///
+    /// This is comparable to `Display`, but allows custom formatting based on attributes.
     fn render(
         &self,
         f: &mut Formatter,

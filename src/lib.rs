@@ -57,9 +57,12 @@ pub fn ident(a: &str) -> IResult<&str, &str> {
     );
 }
 /// Attribute key-value pair.
+/// Represents a key-value attribute, used for metadata and annotations throughout the interface system.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Attr {
+    /// The attribute name.
     pub name: String,
+    /// The attribute value.
     pub value: String,
 }
 
@@ -193,14 +196,16 @@ impl Display for Attr {
         write!(f, "[{}={}]", self.name, self.value)
     }
 }
+
+/// Represents a resource type, which may be absent, a specific resource, or a reference to "this".
 #[non_exhaustive]
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub enum ResTy {
-    // #[display("")]
+    /// No resource.
     None,
-    // #[display("{}", hex::encode(_0))]
+    /// A resource identified by a 32-byte ID.
     Of([u8; 32]),
-    // #[display("this")]
+    /// The current resource ("this").
     This,
 }
 impl ResTy {
@@ -254,27 +259,29 @@ pub fn parse_resty(a: &str) -> IResult<&str, ResTy> {
         },
     ));
 }
+/// Represents an argument type for methods, including primitives and resources.
 #[non_exhaustive]
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub enum Arg {
+    /// 32-bit integer argument.
     I32,
+    /// 64-bit integer argument.
     I64,
+    /// 32-bit float argument.
     F32,
+    /// 64-bit float argument.
     F64,
-    // #[display(
-    //     "{}R{}{}{}",
-    //     ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
-    //     ty,
-    //     if *nullable{"n"}else{""},
-    //     if *take{""}else{"&"}
-    // )]
+    /// Resource argument, with type, nullability, ownership, and annotations.
     Resource {
+        /// Resource type.
         ty: ResTy,
+        /// Whether the resource is nullable.
         nullable: bool,
+        /// Whether the resource is taken (ownership).
         take: bool,
+        /// Annotations for the resource.
         ann: Vec<Attr>,
     },
-    // #[display(fmt = "{}", _0)]
     // Func(Sig),
 }
 impl Arg {
@@ -359,16 +366,15 @@ pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
     }
     todo!()
 }
+
+/// Represents a method signature, including annotations, parameters, and return values.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
-// #[display(
-//    "{}({}) -> ({})",
-//     ann.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(""),
-//     params.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(","),
-//     rets.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(",")
-// )]
 pub struct Sig {
+    /// Annotations for the signature.
     pub ann: Vec<Attr>,
+    /// Method parameters.
     pub params: Vec<Arg>,
+    /// Method return values.
     pub rets: Vec<Arg>,
 }
 impl Sig {
@@ -415,9 +421,12 @@ pub fn parse_sig(a: &str) -> IResult<&str, Sig> {
         },
     ));
 }
+/// Represents an interface, containing methods and interface-level annotations.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Interface {
+    /// Methods in the interface, keyed by name.
     pub methods: BTreeMap<String, Sig>,
+    /// Interface-level annotations.
     pub ann: Vec<Attr>,
 }
 impl Interface {

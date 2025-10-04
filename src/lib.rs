@@ -148,6 +148,9 @@ pub fn merge(a: Vec<Attr>, b: Vec<Attr>) -> Vec<Attr> {
         .collect();
 }
 
+/// Parses a balanced bracketed string, returning the content inside brackets.
+///
+/// Returns a tuple of the remaining input and the parsed string.
 pub fn parse_balanced(mut a: &str) -> IResult<&str, String> {
     let mut v = Vec::default();
     let mut i = 0;
@@ -168,6 +171,9 @@ pub fn parse_balanced(mut a: &str) -> IResult<&str, String> {
     }
 }
 
+/// Parses an attribute from a string in the format `[name=value]`.
+///
+/// Returns a tuple of the remaining input and the parsed `Attr`.
 pub fn parse_attr(a: &str) -> IResult<&str, Attr> {
     let (a, _) = multispace0(a)?;
     let (a, _) = char('[')(a)?;
@@ -188,6 +194,9 @@ pub fn parse_attr(a: &str) -> IResult<&str, Attr> {
     ));
 }
 
+/// Parses a list of attributes from a string.
+///
+/// Returns a tuple of the remaining input and a sorted vector of `Attr`.
 pub fn parse_attrs(a: &str) -> IResult<&str, Vec<Attr>> {
     let (a, mut b) = many0(parse_attr).parse(a)?;
     b.sort_by_key(|a| a.name.clone());
@@ -239,6 +248,9 @@ impl ResTy {
         }
     }
 }
+/// Parses a resource type from a string.
+///
+/// Returns a tuple of the remaining input and the parsed `ResTy`.
 pub fn parse_resty(a: &str) -> IResult<&str, ResTy> {
     if let Some(a) = a.strip_prefix("this") {
         // let (a, k) = opt(tag("n"))(a)?;
@@ -329,6 +341,9 @@ impl Arg {
         }
     }
 }
+/// Parses an argument type from a string, including annotations and resource details.
+///
+/// Returns a tuple of the remaining input and the parsed `Arg`.
 pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
     let (a, ann) = parse_attrs(a)?;
     let (a, _) = multispace0(a)?;
@@ -415,6 +430,9 @@ impl Sig {
         write!(fmt, ")")
     }
 }
+/// Parses a method signature from a string, including parameters, return values, and annotations.
+///
+/// Returns a tuple of the remaining input and the parsed `Sig`.
 pub fn parse_sig(a: &str) -> IResult<&str, Sig> {
     let (a, b) = parse_attrs(a)?;
     let (a, _) = multispace0(a)?;
@@ -466,6 +484,9 @@ impl Interface {
         return write!(f, "{}", "}");
     }
 }
+/// Parses an interface from a string, including methods and interface-level annotations.
+///
+/// Returns a tuple of the remaining input and the parsed `Interface`.
 pub fn parse_interface(a: &str) -> IResult<&str, Interface> {
     pub fn go(a: &str) -> IResult<&str, Interface> {
         let (a, s) = separated_list0(char(';'), tuple((multispace0, ident, parse_sig))).parse(a)?;

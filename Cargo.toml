@@ -18,3 +18,4 @@ sha3 = { version = "0.10.8", default-features = false }
 [features]
 unstable-pcode=[]
 unstable-generics=[]
+doc-attrs=[]

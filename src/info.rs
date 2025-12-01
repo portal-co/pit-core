@@ -45,6 +45,60 @@ impl InfoEntry {
             methods: m,
         }
     }
+
+    /// Returns the human-readable display name for this interface, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn name(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_name())
+    }
+
+    /// Returns the full documentation text for this interface, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn doc(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_doc())
+    }
+
+    /// Returns the brief summary for this interface, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn brief(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_brief())
+    }
+
+    /// Returns the deprecation message for this interface, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn deprecated(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_deprecated())
+    }
+
+    /// Returns the LLM context for this interface, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn llm_context(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_llm_context())
+    }
+
+    /// Returns the LLM intent for this interface, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn llm_intent(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_llm_intent())
+    }
+
+    /// Returns the category for this interface, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn category(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_category())
+    }
+
+    /// Returns the version when this interface was introduced, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn since(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_since())
+    }
+
+    /// Returns the value of an attribute by name, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn get_attr(&self, name: &str) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_attr(name))
+    }
 }
 /// Stores attributes for a method.
 #[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
@@ -57,6 +111,48 @@ impl MethEntry {
         MethEntry {
             attrs: merge(self.attrs, x.attrs),
         }
+    }
+
+    /// Returns the human-readable display name for this method, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn name(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_name())
+    }
+
+    /// Returns the full documentation text for this method, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn doc(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_doc())
+    }
+
+    /// Returns the brief summary for this method, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn brief(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_brief())
+    }
+
+    /// Returns the deprecation message for this method, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn deprecated(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_deprecated())
+    }
+
+    /// Returns the LLM context for this method, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn llm_context(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_llm_context())
+    }
+
+    /// Returns the LLM intent for this method, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn llm_intent(&self) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_llm_intent())
+    }
+
+    /// Returns the value of an attribute by name, if set.
+    #[cfg(feature = "doc-attrs")]
+    pub fn get_attr(&self, name: &str) -> Option<&str> {
+        self.attrs.iter().find_map(|a| a.as_attr(name))
     }
 }
 /// Display implementation for InfoEntry, formats attributes as root entries.

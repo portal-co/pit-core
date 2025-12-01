@@ -83,6 +83,110 @@ PIT defines a structured format for describing interfaces, methods, arguments, r
 
 ---
 
+## Info File Structure
+
+The Info file provides out-of-band metadata for interfaces, allowing documentation and annotations to be stored separately from interface definitions. This enables metadata to be merged, updated, and managed independently.
+
+### Format Overview
+
+An Info file consists of one or more interface entries:
+
+```
+<hex-resource-id>: [<info-entry>]
+```
+
+Where:
+- `<hex-resource-id>` is a 64-character hex string (32 bytes)
+- `<info-entry>` contains root and method attributes
+
+### Info Entry Structure
+
+```
+root [attr1=val1]
+root [attr2=val2]
+method methodName [attr1=val1]
+method methodName [attr2=val2]
+```
+
+- `root` attributes apply to the interface itself
+- `method` attributes apply to the named method
+
+### Grammar
+
+```ebnf
+info         = { info-item } ;
+info-item    = hex64, ":", "[", entry, "]" ;
+hex64        = 64 * hex-digit ;
+entry        = { root-attr }, { method-attr } ;
+root-attr    = "root", attribute ;
+method-attr  = "method", identifier, attribute ;
+attribute    = "[", name, "=", value, "]" ;
+```
+
+### Info Structures
+
+- **Info**: Top-level container, maps resource IDs to `InfoEntry`
+- **InfoEntry**: Contains interface-level attributes and method entries
+- **MethEntry**: Contains method-level attributes
+
+### Merging
+
+When multiple Info sources are merged:
+1. Interface entries with the same resource ID are merged
+2. Attributes with the same name are overwritten (last wins)
+3. Method entries with the same name are merged
+4. All attributes are sorted by name for deterministic output
+
+### Example
+
+```
+0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef: [
+    root [name=Authentication Service]
+    root [doc=Provides user authentication]
+    root [version=1.0.0]
+    method login [name=User Login]
+    method login [doc=Authenticates a user with credentials]
+    method logout [name=User Logout]
+    method logout [doc=Terminates the current session]
+]
+```
+
+---
+
+## Documentation Attributes
+
+PIT supports a set of reserved attributes for documentation and metadata. These are fully documented in `ATTRIBUTES.md`.
+
+### Common Documentation Attributes
+
+| Attribute | Description |
+|-----------|-------------|
+| `name` | Human-readable display name |
+| `doc` | Full documentation text |
+| `brief` | Short one-line summary |
+| `deprecated` | Deprecation notice |
+| `since` | Version introduced |
+| `category` | Logical grouping |
+
+### LLM-Readable Attributes
+
+| Attribute | Description |
+|-----------|-------------|
+| `llm.context` | Extended context for LLM understanding |
+| `llm.intent` | Intended use case or purpose |
+| `llm.constraints` | Constraints for LLM processing |
+
+### Feature Gate
+
+In the Rust implementation, documentation attribute helpers are gated behind the `doc-attrs` feature:
+
+```toml
+[features]
+doc-attrs = []
+```
+
+---
+
 ## Example
 ```
 [api=example]{
@@ -94,3 +198,4 @@ PIT defines a structured format for describing interfaces, methods, arguments, r
 ---
 
 For further details, see the doc comments and parsing/rendering implementations in `src/lib.rs`.
+For documentation attributes, see `ATTRIBUTES.md`.

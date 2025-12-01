@@ -135,6 +135,179 @@ impl Attr {
             })
         }
     }
+
+    // Documentation attribute accessors (feature-gated)
+
+    /// Returns the value if this is a `name` attribute (human-readable display name).
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_name(&self) -> Option<&str> {
+        if self.name == "name" {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates a `name` attribute with the given display name.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_name(name: impl Into<String>) -> Self {
+        Self {
+            name: "name".to_owned(),
+            value: name.into(),
+        }
+    }
+
+    /// Returns the value if this is a `doc` attribute (full documentation text).
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_doc(&self) -> Option<&str> {
+        if self.name == "doc" {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates a `doc` attribute with the given documentation text.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_doc(doc: impl Into<String>) -> Self {
+        Self {
+            name: "doc".to_owned(),
+            value: doc.into(),
+        }
+    }
+
+    /// Returns the value if this is a `brief` attribute (short one-line summary).
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_brief(&self) -> Option<&str> {
+        if self.name == "brief" {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates a `brief` attribute with the given summary text.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_brief(brief: impl Into<String>) -> Self {
+        Self {
+            name: "brief".to_owned(),
+            value: brief.into(),
+        }
+    }
+
+    /// Returns the value if this is a `deprecated` attribute.
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_deprecated(&self) -> Option<&str> {
+        if self.name == "deprecated" {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates a `deprecated` attribute with the given deprecation message.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_deprecated(msg: impl Into<String>) -> Self {
+        Self {
+            name: "deprecated".to_owned(),
+            value: msg.into(),
+        }
+    }
+
+    /// Returns the value if this is an `llm.context` attribute (LLM-readable context).
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_llm_context(&self) -> Option<&str> {
+        if self.name == "llm.context" {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates an `llm.context` attribute with the given context text.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_llm_context(ctx: impl Into<String>) -> Self {
+        Self {
+            name: "llm.context".to_owned(),
+            value: ctx.into(),
+        }
+    }
+
+    /// Returns the value if this is an `llm.intent` attribute (LLM-readable intent).
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_llm_intent(&self) -> Option<&str> {
+        if self.name == "llm.intent" {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates an `llm.intent` attribute with the given intent description.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_llm_intent(intent: impl Into<String>) -> Self {
+        Self {
+            name: "llm.intent".to_owned(),
+            value: intent.into(),
+        }
+    }
+
+    /// Returns the value if this is a `category` attribute.
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_category(&self) -> Option<&str> {
+        if self.name == "category" {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates a `category` attribute with the given category name.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_category(cat: impl Into<String>) -> Self {
+        Self {
+            name: "category".to_owned(),
+            value: cat.into(),
+        }
+    }
+
+    /// Returns the value if this is a `since` attribute (version introduced).
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_since(&self) -> Option<&str> {
+        if self.name == "since" {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates a `since` attribute with the given version string.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_since(version: impl Into<String>) -> Self {
+        Self {
+            name: "since".to_owned(),
+            value: version.into(),
+        }
+    }
+
+    /// Returns the value if this attribute matches the given name.
+    #[cfg(feature = "doc-attrs")]
+    pub fn as_attr(&self, attr_name: &str) -> Option<&str> {
+        if self.name == attr_name {
+            Some(&self.value)
+        } else {
+            None
+        }
+    }
+
+    /// Creates an attribute with the given name and value.
+    #[cfg(feature = "doc-attrs")]
+    pub fn from_attr(name: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            value: value.into(),
+        }
+    }
 }
 
 pub fn merge(a: Vec<Attr>, b: Vec<Attr>) -> Vec<Attr> {

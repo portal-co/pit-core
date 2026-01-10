@@ -31,3 +31,12 @@ use pit_core::pcode::*;
 
 ## License
 MIT
+
+## Goals
+- [ ] Add project goals
+
+## Progress
+- [ ] Initial setup
+
+---
+*AI assisted*

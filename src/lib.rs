@@ -450,10 +450,19 @@ pub fn parse_resty(a: &str) -> IResult<&str, ResTy> {
         },
     ));
 }
-/// Represents an argument type for methods, including primitives and resources.
+/// Wrapper struct for argument types that can have attributes.
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+pub struct Arg {
+    /// The core argument type.
+    pub ty: ArgTy,
+    /// Attributes for this argument.
+    pub ann: Vec<Attr>,
+}
+
+/// Core argument types for methods, including primitives and resources.
 #[non_exhaustive]
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
-pub enum Arg {
+pub enum ArgTy {
     /// 32-bit integer argument.
     I32,
     /// 64-bit integer argument.
@@ -462,7 +471,7 @@ pub enum Arg {
     F32,
     /// 64-bit float argument.
     F64,
-    /// Resource argument, with type, nullability, ownership, and annotations.
+    /// Resource argument, with type, nullability, and ownership.
     Resource {
         /// Resource type.
         ty: ResTy,
@@ -470,8 +479,6 @@ pub enum Arg {
         nullable: bool,
         /// Whether the resource is taken (ownership).
         take: bool,
-        /// Annotations for the resource.
-        ann: Vec<Attr>,
     },
     // Func(Sig),
 }
@@ -484,25 +491,22 @@ impl Arg {
         fmt: &mut Formatter,
         gattrs: &(dyn Fn(&str) -> Option<usize> + '_),
     ) -> core::fmt::Result {
-        match self {
-            Arg::I32 => write!(fmt, "I32"),
-            Arg::I64 => write!(fmt, "I64"),
-            Arg::F32 => write!(fmt, "F32"),
-            Arg::F64 => write!(fmt, "F64"),
-            Arg::Resource {
+        // Render attributes first
+        for a in &self.ann {
+            write!(fmt, "{a}")?;
+        }
+        
+        match &self.ty {
+            ArgTy::I32 => write!(fmt, "I32"),
+            ArgTy::I64 => write!(fmt, "I64"),
+            ArgTy::F32 => write!(fmt, "F32"),
+            ArgTy::F64 => write!(fmt, "F64"),
+            ArgTy::Resource {
                 ty,
                 nullable,
                 take,
-                ann,
             } => {
-                write!(
-                    fmt,
-                    "{}R",
-                    ann.iter()
-                        .map(|a| a.to_string())
-                        .collect::<Vec<_>>()
-                        .join(""),
-                )?;
+                write!(fmt, "R")?;
                 ty.render(fmt, gattrs)?;
                 write!(
                     fmt,
@@ -512,6 +516,76 @@ impl Arg {
                 )
             }
         }
+    }
+    
+    /// Create a new Arg from an ArgTy with no attributes.
+    pub fn new(ty: ArgTy) -> Self {
+        Self { ty, ann: vec![] }
+    }
+    
+    /// Create a new Arg from an ArgTy with the given attributes.
+    pub fn with_attrs(ty: ArgTy, ann: Vec<Attr>) -> Self {
+        Self { ty, ann }
+    }
+    
+    /// Add an attribute to this argument.
+    pub fn with_attr(mut self, attr: Attr) -> Self {
+        self.ann.push(attr);
+        self.ann.sort_by_key(|a| a.name.clone());
+        self
+    }
+    
+    /// Convenience methods for creating primitive types
+    pub fn i32() -> Self { Self::new(ArgTy::I32) }
+    pub fn i64() -> Self { Self::new(ArgTy::I64) }
+    pub fn f32() -> Self { Self::new(ArgTy::F32) }
+    pub fn f64() -> Self { Self::new(ArgTy::F64) }
+    
+    /// Convenience method for creating resource types
+    pub fn resource(ty: ResTy, nullable: bool, take: bool) -> Self {
+        Self::new(ArgTy::Resource { ty, nullable, take })
+    }
+}
+
+impl ArgTy {
+    /// Renders the core argument type to a formatter.
+    ///
+    /// This is comparable to `Display`, but allows custom formatting based on attributes.
+    fn render(
+        &self,
+        fmt: &mut Formatter,
+        gattrs: &(dyn Fn(&str) -> Option<usize> + '_),
+    ) -> core::fmt::Result {
+        match self {
+            ArgTy::I32 => write!(fmt, "I32"),
+            ArgTy::I64 => write!(fmt, "I64"),
+            ArgTy::F32 => write!(fmt, "F32"),
+            ArgTy::F64 => write!(fmt, "F64"),
+            ArgTy::Resource {
+                ty,
+                nullable,
+                take,
+            } => {
+                write!(fmt, "R")?;
+                ty.render(fmt, gattrs)?;
+                write!(
+                    fmt,
+                    "{}{}",
+                    if *nullable { "n" } else { "" },
+                    if *take { "" } else { "&" }
+                )
+            }
+        }
+    }
+
+    /// Convenience function to create an Arg with attributes.
+    pub fn with_attrs(self, ann: Vec<Attr>) -> Arg {
+        Arg { ty: self, ann }
+    }
+    
+    /// Convenience function to create an Arg with no attributes.
+    pub fn into_arg(self) -> Arg {
+        Arg { ty: self, ann: vec![] }
     }
 }
 /// Parses an argument type from a string, including annotations and resource details.
@@ -538,10 +612,12 @@ pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
             let (a, take) = opt(tag("&")).parse(a)?;
             return Ok((
                 a,
-                Arg::Resource {
-                    ty: d,
-                    nullable: k.is_some(),
-                    take: take.is_none(),
+                Arg {
+                    ty: ArgTy::Resource {
+                        ty: d,
+                        nullable: k.is_some(),
+                        take: take.is_none(),
+                    },
                     ann,
                 },
             ));
@@ -552,13 +628,14 @@ pub fn parse_arg(a: &str) -> IResult<&str, Arg> {
         // }
         None => {
             let (a, c) = take(3usize)(a)?;
-            match c {
-                "I32" => return Ok((a, Arg::I32)),
-                "I64" => return Ok((a, Arg::I64)),
-                "F32" => return Ok((a, Arg::F32)),
-                "F64" => return Ok((a, Arg::F64)),
+            let ty = match c {
+                "I32" => ArgTy::I32,
+                "I64" => ArgTy::I64,
+                "F32" => ArgTy::F32,
+                "F64" => ArgTy::F64,
                 _ => return Err(nom::Err::Error(Error::new(a, nom::error::ErrorKind::Tag))),
-            }
+            };
+            return Ok((a, Arg { ty, ann }));
         }
     }
     todo!()
@@ -687,7 +764,7 @@ macro_rules! display {
         })*};
     };
 }
-display!(Sig, ResTy, Arg);
+display!(Sig, ResTy, Arg, ArgTy);
 impl Display for Interface {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.render(f, &|ab| self.ann.iter().find_map(|a| a.as_ver(ab)))
@@ -723,5 +800,106 @@ pub fn retuple(a: Vec<Arg>) -> Interface {
             })
             .collect(),
         ann: vec![],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_primitive_with_attributes() {
+        // Test creating primitive types with attributes
+        let i32_with_attr = ArgTy::I32.with_attrs(vec![
+            Attr {
+                name: "name".to_owned(),
+                value: "counter".to_owned(),
+            }
+        ]);
+        
+        // Verify the structure
+        assert_eq!(i32_with_attr.ann.len(), 1);
+        assert_eq!(i32_with_attr.ann[0].name, "name");
+        assert_eq!(i32_with_attr.ann[0].value, "counter");
+        assert!(matches!(i32_with_attr.ty, ArgTy::I32));
+        
+        // Test display formatting includes attributes
+        let formatted = format!("{}", i32_with_attr);
+        assert!(formatted.contains("[name=counter]"));
+        assert!(formatted.contains("I32"));
+    }
+
+    #[test]
+    fn test_parsing_primitive_with_attributes() {
+        // Test parsing attributes on primitive types
+        let parsed_i32 = parse_arg("[name=test_counter]I32").unwrap().1;
+        let parsed_f64 = parse_arg("[doc=floating_point][precision=high]F64").unwrap().1;
+        
+        // Verify I32 parsing
+        assert_eq!(parsed_i32.ann.len(), 1);
+        assert_eq!(parsed_i32.ann[0].name, "name");
+        assert_eq!(parsed_i32.ann[0].value, "test_counter");
+        assert!(matches!(parsed_i32.ty, ArgTy::I32));
+        
+        // Verify F64 parsing with multiple attributes
+        assert_eq!(parsed_f64.ann.len(), 2);
+        // Attributes should be sorted by name
+        assert_eq!(parsed_f64.ann[0].name, "doc");
+        assert_eq!(parsed_f64.ann[0].value, "floating_point");
+        assert_eq!(parsed_f64.ann[1].name, "precision");
+        assert_eq!(parsed_f64.ann[1].value, "high");
+        assert!(matches!(parsed_f64.ty, ArgTy::F64));
+    }
+
+    #[test]
+    fn test_resource_attributes_still_work() {
+        // Test that resource types still work with attributes
+        let parsed_resource = parse_arg("[doc=test_resource]Rthisn").unwrap().1;
+        
+        assert_eq!(parsed_resource.ann.len(), 1);
+        assert_eq!(parsed_resource.ann[0].name, "doc");
+        assert_eq!(parsed_resource.ann[0].value, "test_resource");
+        
+        if let ArgTy::Resource { ty, nullable, take } = parsed_resource.ty {
+            assert!(matches!(ty, ResTy::This));
+            assert!(nullable);
+            assert!(take);
+        } else {
+            panic!("Expected Resource type");
+        }
+    }
+
+    #[test]
+    fn test_no_attributes_still_works() {
+        // Test that types without attributes still parse correctly
+        let parsed_i64 = parse_arg("I64").unwrap().1;
+        
+        assert_eq!(parsed_i64.ann.len(), 0);
+        assert!(matches!(parsed_i64.ty, ArgTy::I64));
+    }
+    
+    #[test]
+    fn test_convenience_methods() {
+        // Test convenience constructors
+        let i32_arg = Arg::i32();
+        assert!(matches!(i32_arg.ty, ArgTy::I32));
+        assert_eq!(i32_arg.ann.len(), 0);
+        
+        let f64_with_attr = Arg::f64().with_attr(Attr {
+            name: "precision".to_owned(),
+            value: "double".to_owned(),
+        });
+        assert!(matches!(f64_with_attr.ty, ArgTy::F64));
+        assert_eq!(f64_with_attr.ann.len(), 1);
+        assert_eq!(f64_with_attr.ann[0].name, "precision");
+        
+        let resource_arg = Arg::resource(ResTy::This, true, false);
+        if let ArgTy::Resource { ty, nullable, take } = resource_arg.ty {
+            assert!(matches!(ty, ResTy::This));
+            assert!(nullable);
+            assert!(!take);
+        } else {
+            panic!("Expected Resource type");
+        }
     }
 }

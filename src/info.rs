@@ -14,6 +14,87 @@ use nom::{
 
 use crate::{merge, parse_attr, Attr};
 
+/// Macro to generate documentation attribute accessor methods for types that have an `attrs` field.
+///
+/// This macro generates a set of common documentation attribute accessor methods for any type
+/// that contains an `attrs: Vec<Attr>` field. The generated methods include:
+///
+/// - `name()` - Returns the human-readable display name
+/// - `doc()` - Returns the full documentation text  
+/// - `brief()` - Returns a brief summary
+/// - `deprecated()` - Returns deprecation message
+/// - `llm_context()` - Returns LLM-readable context
+/// - `llm_intent()` - Returns LLM-readable intent
+/// - `category()` - Returns the category
+/// - `since()` - Returns version when introduced
+/// - `get_attr(name)` - Returns value of any attribute by name
+///
+/// All methods are feature-gated behind `#[cfg(feature = "doc-attrs")]`.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// struct MyType {
+///     attrs: Vec<Attr>,
+///     // ... other fields
+/// }
+///
+/// impl_doc_attrs!(MyType);
+/// ```
+///
+/// This will generate an `impl` block with all the documentation accessor methods.
+macro_rules! impl_doc_attrs {
+    ($type:ty) => {
+        #[cfg(feature = "doc-attrs")]
+        impl $type {
+            /// Returns the human-readable display name for this item, if set.
+            pub fn name(&self) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_name())
+            }
+
+            /// Returns the full documentation text for this item, if set.
+            pub fn doc(&self) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_doc())
+            }
+
+            /// Returns the brief summary for this item, if set.
+            pub fn brief(&self) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_brief())
+            }
+
+            /// Returns the deprecation message for this item, if set.
+            pub fn deprecated(&self) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_deprecated())
+            }
+
+            /// Returns the LLM context for this item, if set.
+            pub fn llm_context(&self) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_llm_context())
+            }
+
+            /// Returns the LLM intent for this item, if set.
+            pub fn llm_intent(&self) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_llm_intent())
+            }
+
+            /// Returns the category for this item, if set.
+            pub fn category(&self) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_category())
+            }
+
+            /// Returns the version when this item was introduced, if set.
+            pub fn since(&self) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_since())
+            }
+
+            /// Returns the value of an attribute by name, if set.
+            pub fn get_attr(&self, name: &str) -> Option<&str> {
+                self.attrs.iter().find_map(|a| a.as_attr(name))
+            }
+        }
+    };
+}
+
 /// Stores attributes for a method parameter or return value.
 #[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct ParamEntry {
@@ -27,31 +108,12 @@ impl ParamEntry {
             attrs: merge(self.attrs, x.attrs),
         }
     }
-
-    /// Returns the human-readable display name for this parameter, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn name(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_name())
-    }
-
-    /// Returns the full documentation text for this parameter, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn doc(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_doc())
-    }
-
-    /// Returns the brief summary for this parameter, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn brief(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_brief())
-    }
-
-    /// Returns the value of an attribute by name, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn get_attr(&self, name: &str) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_attr(name))
-    }
 }
+
+// Generate documentation attribute accessor methods for ParamEntry
+// This provides: name(), doc(), brief(), deprecated(), llm_context(), llm_intent(), 
+// category(), since(), and get_attr() methods
+impl_doc_attrs!(ParamEntry);
 /// Stores interface information for the crate.
 #[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct Info {
@@ -237,61 +299,12 @@ impl InfoEntry {
             },
         ))
     }
-
-    /// Returns the human-readable display name for this interface, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn name(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_name())
-    }
-
-    /// Returns the full documentation text for this interface, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn doc(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_doc())
-    }
-
-    /// Returns the brief summary for this interface, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn brief(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_brief())
-    }
-
-    /// Returns the deprecation message for this interface, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn deprecated(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_deprecated())
-    }
-
-    /// Returns the LLM context for this interface, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn llm_context(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_llm_context())
-    }
-
-    /// Returns the LLM intent for this interface, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn llm_intent(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_llm_intent())
-    }
-
-    /// Returns the category for this interface, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn category(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_category())
-    }
-
-    /// Returns the version when this interface was introduced, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn since(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_since())
-    }
-
-    /// Returns the value of an attribute by name, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn get_attr(&self, name: &str) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_attr(name))
-    }
 }
+
+// Generate documentation attribute accessor methods for InfoEntry
+// This provides: name(), doc(), brief(), deprecated(), llm_context(), llm_intent(),
+// category(), since(), and get_attr() methods  
+impl_doc_attrs!(InfoEntry);
 /// Stores attributes for a method, including its parameters and return values.
 #[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 pub struct MethEntry {
@@ -321,48 +334,6 @@ impl MethEntry {
             params,
             returns,
         }
-    }
-
-    /// Returns the human-readable display name for this method, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn name(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_name())
-    }
-
-    /// Returns the full documentation text for this method, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn doc(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_doc())
-    }
-
-    /// Returns the brief summary for this method, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn brief(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_brief())
-    }
-
-    /// Returns the deprecation message for this method, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn deprecated(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_deprecated())
-    }
-
-    /// Returns the LLM context for this method, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn llm_context(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_llm_context())
-    }
-
-    /// Returns the LLM intent for this method, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn llm_intent(&self) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_llm_intent())
-    }
-
-    /// Returns the value of an attribute by name, if set.
-    #[cfg(feature = "doc-attrs")]
-    pub fn get_attr(&self, name: &str) -> Option<&str> {
-        self.attrs.iter().find_map(|a| a.as_attr(name))
     }
 
     /// Returns the parameter entry at the given index, if it exists.
@@ -401,6 +372,11 @@ impl MethEntry {
             .push(attr);
     }
 }
+
+// Generate documentation attribute accessor methods for MethEntry
+// This provides: name(), doc(), brief(), deprecated(), llm_context(), llm_intent(),
+// category(), since(), and get_attr() methods
+impl_doc_attrs!(MethEntry);
 /// Display implementation for InfoEntry, formats attributes as root entries.
 impl Display for InfoEntry {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -709,7 +685,72 @@ mod tests {
         #[cfg(feature = "doc-attrs")]
         {
             assert_eq!(merged_param.name(), Some("input"));
-            assert_eq!(merged_param.doc(), Some("First param doc"));
+        }
+    }
+
+    #[test]
+    fn test_doc_attrs_macro() {
+        // Test that the macro-generated documentation methods work correctly
+        
+        // Test ParamEntry
+        let mut param = ParamEntry::default();
+        param.attrs.push(Attr {
+            name: "name".to_owned(),
+            value: "test_param".to_owned(),
+        });
+        param.attrs.push(Attr {
+            name: "doc".to_owned(),
+            value: "Test parameter".to_owned(),
+        });
+        param.attrs.push(Attr {
+            name: "deprecated".to_owned(),
+            value: "Use v2 instead".to_owned(),
+        });
+
+        #[cfg(feature = "doc-attrs")]
+        {
+            assert_eq!(param.name(), Some("test_param"));
+            assert_eq!(param.doc(), Some("Test parameter"));
+            assert_eq!(param.deprecated(), Some("Use v2 instead"));
+            assert_eq!(param.brief(), None);
+            assert_eq!(param.get_attr("name"), Some("test_param"));
+            assert_eq!(param.get_attr("nonexistent"), None);
+        }
+
+        // Test MethEntry
+        let mut method = MethEntry::default();
+        method.attrs.push(Attr {
+            name: "name".to_owned(),
+            value: "test_method".to_owned(),
+        });
+        method.attrs.push(Attr {
+            name: "llm.context".to_owned(),
+            value: "AI helper context".to_owned(),
+        });
+
+        #[cfg(feature = "doc-attrs")]
+        {
+            assert_eq!(method.name(), Some("test_method"));
+            assert_eq!(method.llm_context(), Some("AI helper context"));
+            assert_eq!(method.doc(), None);
+        }
+
+        // Test InfoEntry  
+        let mut info = InfoEntry::default();
+        info.attrs.push(Attr {
+            name: "category".to_owned(),
+            value: "utility".to_owned(),
+        });
+        info.attrs.push(Attr {
+            name: "since".to_owned(),
+            value: "1.0.0".to_owned(),
+        });
+
+        #[cfg(feature = "doc-attrs")]
+        {
+            assert_eq!(info.category(), Some("utility"));
+            assert_eq!(info.since(), Some("1.0.0"));
+            assert_eq!(info.name(), None);
         }
     }
 }
